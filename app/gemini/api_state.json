@@ -1,0 +1,1183 @@
+{
+    "settings": {
+        "global_cooldown_seconds": 65,
+        "default_rpm_limit": 15,
+        "max_rpd_limit": 1500,
+        "rotation_strategy": "horizontal_sweep",
+        "retry_exhausted_after_hours": 24,
+        "delay_between_requests_ms": 1000
+    },
+    "rotation_state": {
+        "current_project_index": 0,
+        "current_account_index": 0,
+        "total_requests_sent": 0,
+        "rotation_round": 1,
+        "last_daily_reset": "2026-01-03"
+    },
+    "accounts": [
+        {
+            "account_id": "acc_01",
+            "email": "vohoang07octo2527@dexona.online",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_02",
+            "email": "vohoang07...2@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_03",
+            "email": "vohoang07...3@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_04",
+            "email": "vohoang07...4@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_05",
+            "email": "vohoang07...5@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_06",
+            "email": "vohoang07...6@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_07",
+            "email": "vohoang07...7@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_08",
+            "email": "vohoang07...8@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_09",
+            "email": "vohoang07...9@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_10",
+            "email": "vohoang07...10@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_11",
+            "email": "vohoang07...11@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        },
+        {
+            "account_id": "acc_12",
+            "email": "vohoang07...12@gmail.com",
+            "account_status": "active",
+            "projects": [
+                {
+                    "project_name": "Project-1",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-2",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-3",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-4",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                },
+                {
+                    "project_name": "Project-5",
+                    "api_key": "",
+                    "status": "available",
+                    "stats": {
+                        "total_requests_today": 0,
+                        "success_count": 0,
+                        "error_count": 0,
+                        "last_success_timestamp": null,
+                        "last_error_message": null
+                    },
+                    "limit_tracking": {
+                        "last_used_timestamp": null,
+                        "minute_request_count": 0,
+                        "rate_limit_reset_at": null,
+                        "daily_limit_reset_at": null
+                    }
+                }
+            ]
+        }
+    ]
+}

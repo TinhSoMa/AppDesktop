@@ -1,0 +1,20 @@
+{
+    "work_dir": "D:/User/CongTinh/Videos/CapCut Drafts/0101 (3)",
+    "tts_config": {
+        "voice": "vi-VN-NamMinhNeural",
+        "rate": "+30%",
+        "volume": "+30%",
+        "pitch": "-3Hz"
+    },
+    "auto_config": {
+        "draft_file": "draft_content.json",
+        "split_by_lines": true,
+        "lines_per_file": "100",
+        "number_of_parts": "5",
+        "voice": "vi-VN-NamMinhNeural",
+        "rate": "+30%",
+        "volume": "+30%",
+        "gemini_key": "",
+        "gemini_model": "gemini-3-pro-preview"
+    }
+}

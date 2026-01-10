@@ -1,0 +1,9 @@
+capcut/
+test/
+build/
+resources/
+build_temp/
+*pyc
+api_keys.py
+api_old.json
+docs/
