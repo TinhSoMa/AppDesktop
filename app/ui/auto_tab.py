@@ -5,17 +5,39 @@ import json
 import logging
 from app.ui.components.file_combobox import FileCombobox
 from app.core import auto_funtion
+
+# Import Edge Voices
 try:
-    from app.ui.tts_tab import VOICES
+    from app.ui.tts_tab import VOICES as EDGE_VOICES
 except ImportError:
     # Fallback if import fails
-    VOICES = [
+    EDGE_VOICES = [
         "vi-VN-HoaiMyNeural",
         "vi-VN-NamMinhNeural",
         "en-US-AriaNeural",
         "en-US-GuyNeural",
         "zh-CN-XiaoxiaoNeural",
     ]
+
+# Import CapCut Voices & Config
+try:
+    from app.config.list_voice_capcut import get_all_voices, get_voice_id_by_name
+    from app.config.tts_capcut_config import TTSCapCutConfig
+    
+    # Lấy danh sách giọng CapCut (chỉ lấy tên hiển thị)
+    capcut_voices_data = get_all_voices()
+    CAPCUT_VOICES = [v["name"] for v in capcut_voices_data]
+except ImportError:
+    CAPCUT_VOICES = []
+    def get_voice_id_by_name(name): return None
+    class TTSCapCutConfig:
+        AUDIO_CONFIG = {"speech_rate": 0}
+
+# Combine Voices for UI
+# Để phân biệt, ta có thể đánh dấu giọng CapCut, nhưng ở đây cứ gộp chung
+# Kiểm tra logic: nếu tên có trong CAPCUT_VOICES -> CapCut, ngược lại -> Edge
+ALL_VOICES = EDGE_VOICES + CAPCUT_VOICES
+
 
 # Danh sách Model Gemini (2025)
 GEMINI_MODELS = [
@@ -105,6 +127,9 @@ class AutoTab:
         self.auto_config = auto_config or {}
         self.frame = ttk.Frame(parent)
         self.setup_ui()
+    
+    def get_frame(self):
+        return self.frame
         
     def setup_ui(self):
         # Load config defaults
@@ -117,6 +142,7 @@ class AutoTab:
             "voice": self.auto_config.get("voice", "vi-VN-NamMinhNeural"),
             "rate": self.auto_config.get("rate", "+30%"),
             "volume": self.auto_config.get("volume", "+30%"),
+            "capcut_speed": self.auto_config.get("capcut_speed", 0),
             # Gemini Config
             "gemini_model": self.auto_config.get("gemini_model", "gemini-3-pro-preview"),
         }
@@ -141,126 +167,135 @@ class AutoTab:
     def setup_left_panel(self, parent, defaults):
         """Panel bên trái: Cấu hình chung + TTS"""
         
-        # Scrollable wrapper could be added here if needed, keeping it simple for now
         main_content = ttk.Frame(parent, padding="5")
         main_content.pack(fill=tk.BOTH, expand=True)
 
-        # --- Section 1: Chọn File Draft ---
-        input_frame = ttk.LabelFrame(main_content, text="1. Chọn Draft Content JSON", padding="8")
-        input_frame.pack(fill='x', pady=4)
-        
-        ttk.Label(input_frame, text="File Draft:", width=12).pack(side=tk.LEFT)
-        self.draft_json_var = tk.StringVar(value=defaults["draft_file"]) 
-        
-        self.combo_draft = FileCombobox(
-            input_frame, 
-            self.work_dir_var, 
-            ['.json'], 
-            textvariable=self.draft_json_var, 
-            width=40
-        )
-        self.combo_draft.pack(side=tk.LEFT, padx=5, fill='x', expand=True)
-        ttk.Button(input_frame, text="Browse", command=self._browse_json).pack(side=tk.LEFT)
+        # -- Grid Configuration --
+        main_content.columnconfigure(0, weight=1)
+        main_content.columnconfigure(1, weight=1)
 
-        # --- Section 2: Cấu hình Chia Text ---
+        # --- Section 1: Chọn File Draft (Row 0, Spans 2 columns) ---
+        input_frame = ttk.LabelFrame(main_content, text="1. Chọn Draft Content JSON", padding="8")
+        input_frame.grid(row=0, column=0, columnspan=2, sticky='ew', pady=4)
+        
+        ttk.Label(input_frame, text="File Draft:", width=10).pack(side=tk.LEFT)
+        self.draft_json_var = tk.StringVar(value=defaults["draft_file"]) 
+        self.combo_draft = FileCombobox(input_frame, self.work_dir_var, ['.json'], textvariable=self.draft_json_var, width=40)
+        self.combo_draft.pack(side=tk.LEFT, padx=5, fill='x', expand=True)
+        ttk.Button(input_frame, text="Browse", command=self._browse_json, width=8).pack(side=tk.LEFT)
+
+        # --- Section 2: Cấu hình Chia Text (Row 1, Column 0) ---
         split_frame = ttk.LabelFrame(main_content, text="2. Cấu hình chia nhỏ Text", padding="8")
-        split_frame.pack(fill='x', pady=4)
+        split_frame.grid(row=1, column=0, sticky='nsew', pady=4, padx=(0, 2))
         
         self.split_by_lines = tk.BooleanVar(value=defaults["split_by_lines"])
-        
-        # Option A: Chia theo số dòng
-        ttk.Radiobutton(split_frame, text="Số dòng/file:", variable=self.split_by_lines, value=True).pack(side=tk.LEFT)
+        # Line 1: Radio buttons
+        f_split_1 = ttk.Frame(split_frame)
+        f_split_1.pack(fill='x', pady=2)
+        ttk.Radiobutton(f_split_1, text="Dòng/file:", variable=self.split_by_lines, value=True).pack(side=tk.LEFT)
         self.lines_per_file = tk.StringVar(value=defaults["lines_per_file"])
-        ttk.Combobox(split_frame, textvariable=self.lines_per_file, values=["50", "100", "200", "500"], width=5).pack(side=tk.LEFT, padx=2)
-        ttk.Label(split_frame, text="dòng").pack(side=tk.LEFT)
+        ttk.Combobox(f_split_1, textvariable=self.lines_per_file, values=["50", "100", "200", "500"], width=5).pack(side=tk.LEFT, padx=5)
         
-        ttk.Label(split_frame, text="|").pack(side=tk.LEFT, padx=15)
-        
-        # Option B: Chia theo số phần
-        ttk.Radiobutton(split_frame, text="Số phần:", variable=self.split_by_lines, value=False).pack(side=tk.LEFT)
+        f_split_2 = ttk.Frame(split_frame)
+        f_split_2.pack(fill='x', pady=2)
+        ttk.Radiobutton(f_split_2, text="Số phần:", variable=self.split_by_lines, value=False).pack(side=tk.LEFT)
         self.number_of_parts = tk.StringVar(value=defaults["number_of_parts"])
-        ttk.Entry(split_frame, textvariable=self.number_of_parts, width=6).pack(side=tk.LEFT, padx=2)        
-        ttk.Label(split_frame, text="phần").pack(side=tk.LEFT)
+        ttk.Entry(f_split_2, textvariable=self.number_of_parts, width=5).pack(side=tk.LEFT, padx=22) # Align padding
 
-        # --- Section 3: Cấu hình Model Use (Moved from old Section 3) ---
+        # --- Section 3: Cấu hình Gemini Model (Row 1, Column 1) ---
         gemini_frame = ttk.LabelFrame(main_content, text="3. Cấu hình Gemini Model", padding="8")
-        gemini_frame.pack(fill='x', pady=4)
+        gemini_frame.grid(row=1, column=1, sticky='nsew', pady=4, padx=(2, 0))
         
-        ttk.Label(gemini_frame, text="Model:").pack(side=tk.LEFT)
+        ttk.Label(gemini_frame, text="Model:").pack(anchor='w', pady=(0, 2))
         self.gemini_model_var = tk.StringVar(value=defaults["gemini_model"])
-        ttk.Combobox(gemini_frame, textvariable=self.gemini_model_var, values=GEMINI_MODELS, width=25).pack(side=tk.LEFT, padx=5)
-        
-        # Thuật toán Quét Ngang không cần đa luồng
+        ttk.Combobox(gemini_frame, textvariable=self.gemini_model_var, values=GEMINI_MODELS).pack(fill='x', pady=2)
         self.threads_var = tk.StringVar(value="1")
 
-        # --- Section 4: Cấu hình TTS ---
+        # --- Section 4: Cấu hình TTS (Row 2, Spans 2 columns) ---
         tts_frame = ttk.LabelFrame(main_content, text="4. Cấu hình Giọng đọc (TTS)", padding="8")
-        tts_frame.pack(fill='x', pady=4)
+        tts_frame.grid(row=2, column=0, columnspan=2, sticky='ew', pady=4)
         
-        # Rows using grid for alignment
         f_tts = ttk.Frame(tts_frame)
         f_tts.pack(fill='x')
         
+        # Row 0: Voice & SRT Speed Horizontal
         ttk.Label(f_tts, text="Giọng đọc:").grid(row=0, column=0, sticky='w', pady=2)
         self.voice_var = tk.StringVar(value=defaults["voice"])
-        ttk.Combobox(f_tts, textvariable=self.voice_var, values=VOICES, width=30).grid(row=0, column=1, padx=5, sticky='w')
+        self.voice_combo = ttk.Combobox(f_tts, textvariable=self.voice_var, values=ALL_VOICES, width=35)
+        self.voice_combo.grid(row=0, column=1, padx=5, sticky='w')
+        self.voice_var.trace("w", self._on_voice_changed)
         
-        ttk.Label(f_tts, text="Tốc độ:").grid(row=0, column=2, sticky='w', padx=(10, 2))
-        self.rate_var = tk.StringVar(value=defaults["rate"])
-        ttk.Entry(f_tts, textvariable=self.rate_var, width=8).grid(row=0, column=3, sticky='w')
-        
-        ttk.Label(f_tts, text="Âm lượng:").grid(row=0, column=4, sticky='w', padx=(10, 2))
-        self.vol_var = tk.StringVar(value=defaults["volume"])
-        ttk.Entry(f_tts, textvariable=self.vol_var, width=8).grid(row=0, column=5, sticky='w')
-        
-        ttk.Label(f_tts, text="Tốc độ SRT:").grid(row=0, column=6, sticky='w', padx=(10, 2))
+        ttk.Label(f_tts, text="Tốc độ SRT:").grid(row=0, column=2, sticky='w', padx=(20, 5), pady=2)
         self.speed_factor_var = tk.StringVar(value="1.0")
-        speed_spinbox = ttk.Spinbox(f_tts, from_=1.0, to=2.0, increment=0.1, textvariable=self.speed_factor_var, width=5)
-        speed_spinbox.grid(row=0, column=7, sticky='w')
+        ttk.Spinbox(f_tts, from_=1.0, to=2.0, increment=0.1, textvariable=self.speed_factor_var, width=5).grid(row=0, column=3, sticky='w', pady=2)
+        
+        # Row 1: Configurations (Edge / CapCut)
+        self.edge_config_frame = ttk.Frame(f_tts)
+        self.edge_config_frame.grid(row=1, column=0, columnspan=4, sticky='w', pady=(5, 0))
+        ttk.Label(self.edge_config_frame, text="[Edge] Tốc độ:").pack(side=tk.LEFT)
+        self.rate_var = tk.StringVar(value=defaults["rate"])
+        ttk.Entry(self.edge_config_frame, textvariable=self.rate_var, width=10).pack(side=tk.LEFT, padx=5)
+        ttk.Label(self.edge_config_frame, text="Âm lượng:").pack(side=tk.LEFT, padx=(15, 0))
+        self.vol_var = tk.StringVar(value=defaults["volume"])
+        ttk.Entry(self.edge_config_frame, textvariable=self.vol_var, width=10).pack(side=tk.LEFT, padx=5)
+        
+        self.cc_config_frame = ttk.Frame(f_tts)
+        self.cc_config_frame.grid(row=1, column=0, columnspan=4, sticky='w', pady=(5, 0))
+        ttk.Label(self.cc_config_frame, text="[CapCut] Tốc độ đọc:").pack(side=tk.LEFT)
+        self.cc_speed_var = tk.IntVar(value=defaults["capcut_speed"])
+        ttk.Spinbox(self.cc_config_frame, from_=-5, to=5, textvariable=self.cc_speed_var, width=5).pack(side=tk.LEFT, padx=5)
+        ttk.Label(self.cc_config_frame, text="(0: Chuẩn)").pack(side=tk.LEFT, padx=5)
+        
+        self.frame.after(100, self._on_voice_changed)
 
-        # Button Config
-        btn_frame = ttk.Frame(main_content, padding="8")
-        btn_frame.pack(fill='x', pady=4)
+        # --- Section 5: Điều khiển (Row 3, Spans 2 columns) ---
+        run_frame = ttk.LabelFrame(main_content, text="5. Điều khiển & Tiến độ", padding="8")
+        run_frame.grid(row=3, column=0, columnspan=2, sticky='ew', pady=4)
         
-        ttk.Button(btn_frame, text="Lưu cấu hình", command=self.save_config).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Tải mặc định", command=self.load_default_config).pack(side=tk.LEFT, padx=5)
+        # Horizontal Control Bar: Steps | Buttons | Save
+        ctrl_bar = ttk.Frame(run_frame)
+        ctrl_bar.pack(fill='x', pady=2)
         
-        # --- Section 5: Điều khiển Chạy ---
-        run_frame = ttk.LabelFrame(main_content, text="5. Tùy chọn Chạy & Tiến độ", padding="8")
-        run_frame.pack(fill='x', pady=4)
-        
-        # Variables for Checkboxes
+        # Steps Checkboxes
         self.step_vars = {}
-        
-        # Checkboxes for Steps (Horizontal Layout)
-        step_frame = ttk.Frame(run_frame)
-        step_frame.pack(fill='x', pady=5)
-        
-        steps = [
-            (1, "1. Input"),
-            (2, "2. Split"),
-            (3, "3. Dịch"),
-            (4, "4. TTS")
-        ]
-        
-        for val, text in steps:
-            var = tk.BooleanVar(value=True) # Default checked
+        input_steps = [(1, "1.Input"), (2, "2.Split"), (3, "3.Dịch"), (4, "4.TTS")]
+        for val, text in input_steps:
+            var = tk.BooleanVar(value=True)
             self.step_vars[val] = var
-            ttk.Checkbutton(step_frame, text=text, variable=var).pack(side=tk.LEFT, padx=10)
-
-        # Progress/Status Label (Placed below radios)
-        self.lbl_progress = ttk.Label(run_frame, text="Trạng thái: Sẵn sàng", foreground="blue", font=("Segoe UI", 9, "italic"))
-        self.lbl_progress.pack(anchor='w', padx=5, pady=5)
-
-        # Buttons Frame (Start & Stop)
-        btn_run_frame = ttk.Frame(run_frame)
-        btn_run_frame.pack(fill='x', pady=5)
+            ttk.Checkbutton(ctrl_bar, text=text, variable=var).pack(side=tk.LEFT, padx=5)
+            
+        ttk.Separator(ctrl_bar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill='y', padx=10)
         
-        self.btn_run = ttk.Button(btn_run_frame, text="▶ BẮT ĐẦU", command=self._on_run_click)
-        self.btn_run.pack(side=tk.LEFT, fill='x', expand=True, padx=(0, 5))
+        # Run Buttons
+        self.btn_run = ttk.Button(ctrl_bar, text="▶ START", command=self._on_run_click, width=10)
+        self.btn_run.pack(side=tk.LEFT, padx=2)
         
-        self.btn_stop = ttk.Button(btn_run_frame, text="⏹ DỪNG LẠI", state='disabled')
-        self.btn_stop.pack(side=tk.LEFT, fill='x', expand=True)
+        self.btn_stop = ttk.Button(ctrl_bar, text="⏹ STOP", state='disabled', width=10)
+        self.btn_stop.pack(side=tk.LEFT, padx=2)
+        
+        # Config Buttons
+        ttk.Button(ctrl_bar, text="💾 Save Config", command=self.save_config).pack(side=tk.RIGHT, padx=2)
+        ttk.Button(ctrl_bar, text="↺ Defaults", command=self.load_default_config).pack(side=tk.RIGHT, padx=2)
+        
+        # Progress Label
+        self.lbl_progress = ttk.Label(run_frame, text="Ready.", foreground="blue", font=("Segoe UI", 9, "italic"))
+        self.lbl_progress.pack(anchor='w', padx=5, pady=(5,0))
+
+    def _on_voice_changed(self, *args):
+        """Xử lý show/hide setting dựa trên giọng đã chọn"""
+        voice = self.voice_var.get()
+        
+        # Kiểm tra xem có phải giọng CapCut không
+        is_capcut = False
+        if get_voice_id_by_name(voice):
+            is_capcut = True
+        
+        if is_capcut:
+            self.edge_config_frame.grid_remove()
+            self.cc_config_frame.grid()
+        else:
+            self.cc_config_frame.grid_remove()
+            self.edge_config_frame.grid()
 
     def _on_run_click(self):
         selected = [k for k, v in self.step_vars.items() if v.get()]
@@ -339,13 +374,24 @@ class AutoTab:
 
     def _run_step1(self, work_dir):
         """Step 1: Đọc draft_content.json và xuất auto_subtitle.srt"""
-        draft_file = self.draft_json_var.get()
+        # Sử dụng get_full_path() của FileCombobox để lấy đường dẫn chính xác
+        draft_path = self.combo_draft.get_full_path()
         
-        # Xác định đường dẫn đầy đủ
-        if os.path.isabs(draft_file):
-            draft_path = draft_file
-        else:
-            draft_path = os.path.join(work_dir, draft_file)
+        if not draft_path:
+            # Fallback: thử ghép thủ công nếu get_full_path trả về None
+            draft_file = self.draft_json_var.get()
+            if os.path.isabs(draft_file):
+                draft_path = draft_file
+            else:
+                # Loại bỏ tên thư mục gốc nếu có trong đường dẫn (tránh trùng lặp)
+                parts = draft_file.replace("\\", "/").split("/")
+                work_dir_name = os.path.basename(work_dir)
+                
+                if len(parts) >= 2 and parts[0] == work_dir_name:
+                    # Bỏ phần đầu trùng với tên thư mục gốc
+                    draft_file = "/".join(parts[1:])
+                
+                draft_path = os.path.join(work_dir, draft_file)
         
         success, result = auto_funtion.extract_srt_from_draft(draft_path, work_dir)
         return success, result
@@ -384,6 +430,7 @@ class AutoTab:
         voice = self.voice_var.get()
         rate = self.rate_var.get()
         volume = self.vol_var.get()
+        capcut_speed = self.cc_speed_var.get()
         
         # Lấy speed factor từ UI
         try:
@@ -391,7 +438,7 @@ class AutoTab:
         except ValueError:
             speed_factor = 1.0
         
-        success, result = auto_funtion.run_step4_tts(work_dir, voice, rate, volume, speed_factor)
+        success, result = auto_funtion.run_step4_tts(work_dir, voice, rate, volume, speed_factor, capcut_speed)
         return success, result
 
 
@@ -574,15 +621,6 @@ class AutoTab:
             self.lst_keys.insert(tk.END, f"Lỗi load API keys: {str(e)}")
             logging.error(f"Error loading keys: {e}")
 
-    def refresh_api_stats(self):
-        """Reload API manager và refresh hiển thị"""
-        try:
-            from app.core.api_manager import get_api_manager
-            manager = get_api_manager()
-            manager.reload()
-            self.load_api_keys()
-        except Exception as e:
-            logging.error(f"Refresh error: {e}")
     def toggle_api_status(self):
         """Bật/Tắt API key hoặc Account đã chọn"""
         selection = self.lst_keys.curselection()
@@ -780,6 +818,7 @@ class AutoTab:
                 "voice": self.voice_var.get(),
                 "rate": self.rate_var.get(),
                 "volume": self.vol_var.get(),
+                "capcut_speed": self.cc_speed_var.get(),
                 "gemini_model": self.gemini_model_var.get()
             }
             
@@ -803,11 +842,12 @@ class AutoTab:
             self.voice_var.set(self.auto_config.get("voice", "vi-VN-NamMinhNeural"))
             self.rate_var.set(self.auto_config.get("rate", "+30%"))
             self.vol_var.set(self.auto_config.get("volume", "+30%"))
-            self.gemini_model_var.set(self.auto_config.get("gemini_model", "gemini-2.5-flash"))
+            self.cc_speed_var.set(self.auto_config.get("capcut_speed", 0))
+            self.gemini_model_var.set(self.auto_config.get("gemini_model", "gemini-3-pro-preview"))
             
-            logging.info("Đã tải lại cấu hình mặc định!")
+            # Retrigger UI check
+            self._on_voice_changed()
+            
+            messagebox.showinfo("Thông báo", "Đã tải lại mặc định!")
         except Exception as e:
-            logging.error(f"Không thể tải cấu hình: {e}")
-
-    def get_frame(self):
-        return self.frame
+            logging.error(f"Lỗi load default: {e}")

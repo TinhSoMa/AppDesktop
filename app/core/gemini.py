@@ -254,7 +254,7 @@ def translate_file(file_path, output_path, api_keys, model, prompt_template, pro
     Args:
         file_path: Đường dẫn file input
         output_path: Đường dẫn file output
-        api_keys: List các API keys
+        api_keys: List các API keys (có thể truyền rỗng, sẽ tự lấy từ api_manager)
         model: Tên model
         prompt_template: Template prompt
         progress_callback: Callback function để báo tiến độ
@@ -267,25 +267,137 @@ def translate_file(file_path, output_path, api_keys, model, prompt_template, pro
     if not prompt:
         return False, f"Lỗi tạo prompt: {error}"
     
-    # Thử với từng API key
-    last_error = None
-    for key_idx, api_key_info in enumerate(api_keys):
-        # Xử lý cả format cũ (string) và mới (dict)
-        if isinstance(api_key_info, dict):
-            api_key = api_key_info["key"]
-            account_name = api_key_info.get("name", f"Key {key_idx+1}")
-        else:
-            api_key = api_key_info
-            account_name = f"Key {key_idx+1}"
+    # === LẤY API MANAGER ===
+    try:
+        from app.core.api_manager import get_api_manager
+        manager = get_api_manager()
+    except ImportError:
+        try:
+            from api_manager import get_api_manager
+            manager = get_api_manager()
+        except ImportError:
+            manager = None
+    
+    # === KIỂM TRA NẾU CÓ API_KEYS ĐƯỢC TRUYỀN VÀO ===
+    # Nếu có api_keys hợp lệ, dùng trực tiếp thay vì lấy từ api_manager
+    already_tried_keys = set()  # Theo dõi keys đã thử để không thử lại ở fallback
+    
+    if api_keys and len(api_keys) > 0:
+        # Dùng api_keys được truyền vào
+        last_error = None
+        rate_limited_count = 0
         
-        logging.info(f"Thử API key #{key_idx + 1} ({account_name})")
+        for key_idx, api_key_info in enumerate(api_keys):
+            if isinstance(api_key_info, dict):
+                api_key = api_key_info.get("api_key") or api_key_info.get("key")
+                account_name = api_key_info.get("name", f"Key {key_idx+1}")
+            else:
+                api_key = api_key_info
+                account_name = f"Key {key_idx+1}"
+            
+            if not api_key:
+                continue
+            
+            already_tried_keys.add(api_key)  # Đánh dấu key này đã thử
+            
+            # Không log "Thử API key" vì đã log ở auto_funtion.py rồi
+            logging.info(f"Gọi Gemini API với model: {model}")
+            
+            success, result = call_gemini_api(prompt, api_key, model)
+            
+            if success:
+                try:
+                    clean_result = result.strip()
+                    if clean_result.startswith("|"):
+                        clean_result = clean_result[1:]
+                    if clean_result.endswith("|"):
+                        clean_result = clean_result[:-1]
+                    
+                    translated_lines = [line.strip() for line in clean_result.split("|") if line.strip()]
+                    
+                    with open(output_path, "w", encoding="utf-8") as f:
+                        for line in translated_lines:
+                            f.write(line + "\n")
+                    
+                    # Ghi nhận thành công
+                    if manager:
+                        manager.record_success(api_key)
+                    
+                    logging.info(f"[Gemini] ✓ Thành công với {account_name}")
+                    return True, f"Đã dịch {len(translated_lines)} dòng"
+                    
+                except Exception as e:
+                    last_error = f"Lỗi parse kết quả: {e}"
+                    logging.error(f"[Gemini] Lỗi parse: {e}")
+                    continue
+            
+            elif result == "RATE_LIMIT":
+                logging.warning(f"[Gemini] ⚠ Rate limit với {account_name}, thử key tiếp theo...")
+                if manager:
+                    manager.record_rate_limit_error(api_key)
+                last_error = "RATE_LIMIT_ALL_KEYS"
+                rate_limited_count += 1
+                time.sleep(0.3)
+                continue
+            else:
+                logging.error(f"[Gemini] ✗ Lỗi với {account_name}: {result}")
+                if manager:
+                    manager.record_error(api_key, result)
+                last_error = result
+                continue
+        
+        # Nếu hết api_keys truyền vào mà vẫn thất bại
+        # KHÔNG trả về ngay, tiếp tục thử với các key khác từ api_manager
+        if rate_limited_count > 0:
+            logging.info(f"[Gemini] Key được chỉ định bị rate limit, thử các key khác...")
+            # Tiếp tục xuống phần fallback bên dưới để thử api_manager
+        elif last_error:
+            return False, f"Thất bại với key được chỉ định: {last_error}"
+    
+    # === TIẾP TỤC THỬ VỚI API_MANAGER ===
+    if not manager:
+        return False, "Không có API key và không có api_manager"
+    
+    stats = manager.get_stats()
+    total_keys = stats.get("total_projects", 0)
+    
+    if total_keys == 0:
+        return False, "Không có API key nào trong hệ thống"
+    
+    last_error = None
+    rate_limited_count = 0
+    tried_keys = already_tried_keys.copy()  # Bắt đầu với các key đã thử ở phần trên
+    
+    max_attempts = total_keys
+    attempt = 0
+    
+    while attempt < max_attempts:
+        attempt += 1
+        
+        api_key, key_info = manager.get_next_api_key()
+        
+        if not api_key:
+            logging.warning(f"[Gemini] Không còn key available sau {attempt} lần thử")
+            break
+        
+        # Bỏ qua key đã thử
+        if api_key in tried_keys:
+            # Kiểm tra xem đã hết key chưa
+            if len(tried_keys) >= total_keys:
+                logging.info(f"[Gemini] Đã thử hết tất cả keys ({len(tried_keys)} keys)")
+                break
+            continue
+        
+        tried_keys.add(api_key)
+        account_name = key_info.get("name", f"Key #{attempt}") if key_info else f"Key #{attempt}"
+        
+        logging.info(f"Thử API key #{len(tried_keys)} ({account_name})")
         
         success, result = call_gemini_api(prompt, api_key, model)
         
         if success:
             # Parse kết quả (format: |Câu1|Câu2|...|CâuN|)
             try:
-                # Loại bỏ ký tự | ở đầu và cuối, sau đó split
                 clean_result = result.strip()
                 if clean_result.startswith("|"):
                     clean_result = clean_result[1:]
@@ -299,28 +411,65 @@ def translate_file(file_path, output_path, api_keys, model, prompt_template, pro
                     for line in translated_lines:
                         f.write(line + "\n")
                 
-                # Ghi nhận thành công
-                _record_api_success(api_key)
+                # Ghi nhận thành công (rotation state đã được update trong get_next_api_key)
+                manager.record_success(api_key)
                 
+                logging.info(f"[Gemini] ✓ Thành công với {account_name}")
                 return True, f"Đã dịch {len(translated_lines)} dòng"
                 
             except Exception as e:
                 last_error = f"Lỗi parse kết quả: {e}"
+                logging.error(f"[Gemini] Lỗi parse: {e}")
                 continue
         
         elif result == "RATE_LIMIT":
-            logging.warning(f"Rate limit với key #{key_idx + 1}, thử key tiếp theo...")
-            _record_api_rate_limit(api_key)
-            last_error = "Rate limit exceeded"
-            time.sleep(1)
+            logging.warning(f"[Gemini] ⚠ Rate limit với {account_name}, thử key tiếp theo...")
+            manager.record_rate_limit_error(api_key)
+            last_error = "RATE_LIMIT_ALL_KEYS"
+            rate_limited_count += 1
+            time.sleep(0.3)  # Short delay before trying next key
             continue
         else:
             # Ghi nhận lỗi khác
-            _record_api_error(api_key, result)
+            logging.error(f"[Gemini] ✗ Lỗi với {account_name}: {result}")
+            manager.record_error(api_key, result)
             last_error = result
             continue
     
-    return False, f"Tất cả API key đều thất bại: {last_error}"
+    # Kiểm tra kết quả
+    if rate_limited_count > 0 and rate_limited_count >= len(tried_keys):
+        logging.warning(f"[Gemini] Tất cả {rate_limited_count} keys đã thử đều bị rate limit")
+        return False, "RATE_LIMIT_ALL_KEYS"
+    
+    return False, f"Thất bại sau {attempt} lần thử: {last_error}"
+
+
+def _translate_file_legacy(prompt, output_path, api_keys, model):
+    """Fallback: Dịch file với danh sách api_keys truyền vào (không dùng api_manager)"""
+    if not api_keys:
+        return False, "Không có API key nào"
+    
+    for key_idx, api_key_info in enumerate(api_keys):
+        if isinstance(api_key_info, dict):
+            api_key = api_key_info.get("api_key") or api_key_info.get("key")
+        else:
+            api_key = api_key_info
+        
+        if not api_key:
+            continue
+        
+        success, result = call_gemini_api(prompt, api_key, model)
+        if success:
+            try:
+                clean_result = result.strip().strip("|")
+                lines = [l.strip() for l in clean_result.split("|") if l.strip()]
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write("\n".join(lines) + "\n")
+                return True, f"Đã dịch {len(lines)} dòng"
+            except Exception as e:
+                continue
+    
+    return False, "Tất cả API key đều thất bại"
 
 
 def _record_api_success(api_key: str):

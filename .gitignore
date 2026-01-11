@@ -1,9 +1,9 @@
-capcut/
-test/
 build/
 resources/
 build_temp/
-*pyc
+__pycache__/
 api_keys.py
 api_old.json
 docs/
+capcut/
+test/

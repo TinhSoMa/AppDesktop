@@ -5,6 +5,9 @@ import math
 import logging
 import subprocess
 import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ============================================================================
 # PATCH: CHẶN CỬA SỔ CMD KHI CHẠY FFMPEG VÀ EDGE-TTS (WINDOWS)
@@ -192,13 +195,14 @@ def extract_text_lines_from_srt(srt_path):
 # ========== STEP 3: Call Gemini API for Translation ==========
 def run_step3_translate(work_dir, model, max_workers=3, progress_callback=None):
     """
-    Bước 3: Dịch tất cả các file part bằng Gemini API (đa luồng)
-    (Có hỗ trợ tự động đổi model nếu hết Quota)
-    """
-    import threading
-    import queue
-    import time
+    Bước 3: Dịch tất cả các file part bằng Gemini API.
     
+    THUẬT TOÁN:
+    1. Gửi các request dịch song song với khoảng cách 2 giây giữa mỗi request.
+    2. Không cần đợi file trước hoàn thành mới gửi file tiếp theo.
+    3. Nếu file nào lỗi → retry lại sau khi tất cả files đã thử xong.
+    4. Nếu tất cả keys bị rate limit → chuyển model.
+    """
     logging.info(f"[Step 3] Bắt đầu dịch. Model khởi điểm: {model}")
 
     # Import dependencies
@@ -240,98 +244,141 @@ def run_step3_translate(work_dir, model, max_workers=3, progress_callback=None):
     ]
     
     current_model = model
-    files_to_process = list(part_files)
     completed_files = set()
     errors_encountered = []
     
     if current_model not in MODEL_PRIORITY:
         MODEL_PRIORITY = [current_model] + [m for m in MODEL_PRIORITY if m != current_model]
 
-    # --- MAIN LOOP: Retry with fallback models ---
-    while True:
-        logging.info(f">>> [Step 3 Session] Chạy {len(files_to_process)} files với model: {current_model}")
+    # Cấu hình
+    STAGGER_DELAY = 2.0  # Delay 2 giây giữa các request
+    MAX_RETRIES = 2  # Số lần retry tối đa cho mỗi file
+    
+    # Lock để thread-safe logging và results
+    results_lock = threading.Lock()
+    
+    def translate_single_file(filename, model_name, api_key_info=None, retry_count=0):
+        """Hàm dịch một file đơn lẻ (chạy trong thread)"""
+        input_path = os.path.join(text_dir, filename)
+        output_filename = filename.replace(".txt", "_translated.txt")
+        output_path = os.path.join(translated_dir, output_filename)
         
-        q = queue.Queue()
-        for f in files_to_process:
-            q.put(f)
+        # Nếu có api_key_info truyền vào, sử dụng nó
+        if api_key_info:
+            api_keys_to_use = [api_key_info]
+        else:
+            api_keys_to_use = []  # Để gemini.translate_file tự lấy
+        
+        success, msg = gemini.translate_file(
+            file_path=input_path,
+            output_path=output_path,
+            api_keys=api_keys_to_use,
+            model=model_name,
+            prompt_template=prompt_template
+        )
+        
+        return {
+            "filename": filename,
+            "success": success,
+            "message": msg,
+            "retry_count": retry_count,
+            "api_used": api_key_info.get("name", "Unknown") if api_key_info else "Auto"
+        }
+
+    # --- MAIN LOOP: Process files with model fallback ---
+    files_to_process = list(part_files)
+    
+    while files_to_process:
+        logging.info(f">>> [Step 3 Session] Xử lý {len(files_to_process)} files với model: {current_model}")
+        
+        # Reset rate_limited status trước khi bắt đầu với model mới
+        api_manager.reset_all_status_except_disabled()
+        
+        batch_results = []
+        all_keys_exhausted = False
+        
+        # === GỬI CÁC REQUEST SONG SONG VỚI STAGGER ===
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {}
             
-        lock = threading.Lock()
-        no_key_event = threading.Event()
-        batch_completed_files = []
-        batch_failed_files = []
-        
-        def worker():
-            while not q.empty() and not no_key_event.is_set():
-                try:
-                    filename = q.get(timeout=1)
-                except queue.Empty:
-                    break
+            for i, filename in enumerate(files_to_process):
+                # Stagger delay - chờ 2 giây giữa mỗi lần submit (trừ file đầu tiên)
+                if i > 0:
+                    time.sleep(STAGGER_DELAY)
                 
-                if no_key_event.is_set():
-                    q.task_done()
-                    return
-
-                with lock:
-                    api_key, key_info = api_manager.get_next_api_key()
+                # Lấy API key trước để hiển thị trong log
+                api_key, key_info = api_manager.get_next_api_key()
                 
-                if not api_key:
-                    no_key_event.set()
-                    q.task_done()
-                    return
-
-                # Process
-                input_path = os.path.join(text_dir, filename)
-                output_filename = filename.replace(".txt", "_translated.txt")
-                output_path = os.path.join(translated_dir, output_filename)
-                account_name = key_info.get("name", "Unknown") if key_info else "Unknown"
-                
-                logging.info(f"   [{current_model}] Dịch {filename} bằng {account_name}")
-                
-                success, msg = gemini.translate_file(
-                    file_path=input_path,
-                    output_path=output_path,
-                    api_keys=[{"key": api_key, "name": account_name}],
-                    model=current_model,
-                    prompt_template=prompt_template
-                )
-                
-                if success:
-                    with lock:
-                        batch_completed_files.append(filename)
-                        logging.info(f"   ✓ Xong {filename}")
+                if api_key and key_info:
+                    api_name = key_info.get("name", "Unknown")
+                    api_key_info = {"api_key": api_key, "name": api_name}
+                    logging.info(f"   📤 [{i+1}/{len(files_to_process)}] {filename} → {api_name}")
                 else:
-                    with lock:
-                        batch_failed_files.append(filename)
-                        errors_encountered.append(f"{filename}: {msg}")
-                        logging.error(f"   ✗ Lỗi {filename}: {msg}")
+                    api_key_info = None
+                    logging.warning(f"   📤 [{i+1}/{len(files_to_process)}] {filename} → Không có key available!")
                 
-                delay = api_manager.get_delay_ms()
-                if delay > 0:
-                    time.sleep(delay / 1000.0)
-                
-                q.task_done()
-
-        threads = []
-        workers = min(max_workers, len(files_to_process))
-        for _ in range(workers):
-            t = threading.Thread(target=worker)
-            t.start()
-            threads.append(t)
+                future = executor.submit(translate_single_file, filename, current_model, api_key_info)
+                futures[future] = filename
             
-        for t in threads:
-            t.join()
-
-        for f in batch_completed_files:
-            completed_files.add(f)
+            # Thu thập kết quả khi hoàn thành
+            for future in as_completed(futures):
+                result = future.result()
+                batch_results.append(result)
+                
+                if result["success"]:
+                    logging.info(f"   ✓ {result['filename']} ({result['api_used']})")
+                elif result["message"] == "RATE_LIMIT_ALL_KEYS":
+                    logging.warning(f"   ⚠ Rate limit: {result['filename']}")
+                    all_keys_exhausted = True
+                else:
+                    logging.error(f"   ✗ {result['filename']}: {result['message']}")
         
+        # === XỬ LÝ KẾT QUẢ ===
+        batch_completed = []
+        batch_failed = []
+        
+        for result in batch_results:
+            if result["success"]:
+                batch_completed.append(result["filename"])
+                completed_files.add(result["filename"])
+            else:
+                batch_failed.append(result)
+        
+        # Cập nhật danh sách files còn lại
         files_to_process = [f for f in part_files if f not in completed_files]
         
         if not files_to_process:
             logging.info(">>> Đã dịch xong tất cả các file.")
             break
+        
+        # === RETRY CÁC FILE BỊ LỖI (không phải rate limit) ===
+        retry_files = [r for r in batch_failed if r["message"] != "RATE_LIMIT_ALL_KEYS" and r["retry_count"] < MAX_RETRIES]
+        
+        if retry_files and not all_keys_exhausted:
+            logging.info(f">>> Retry {len(retry_files)} file bị lỗi...")
+            time.sleep(2)  # Wait a bit before retry
             
-        if no_key_event.is_set():
-            logging.warning(f"!!! HẾT KEY CHO MODEL {current_model} !!!")
+            for result in retry_files:
+                filename = result["filename"]
+                retry_count = result["retry_count"] + 1
+                
+                logging.info(f"   🔄 Retry [{retry_count}/{MAX_RETRIES}] {filename}")
+                retry_result = translate_single_file(filename, current_model, retry_count)
+                
+                if retry_result["success"]:
+                    completed_files.add(filename)
+                    logging.info(f"   ✓ Retry thành công {filename}")
+                else:
+                    errors_encountered.append(f"{filename}: {retry_result['message']}")
+                    logging.error(f"   ✗ Retry thất bại {filename}: {retry_result['message']}")
+                
+                time.sleep(1)
+            
+            # Cập nhật lại danh sách
+            files_to_process = [f for f in part_files if f not in completed_files]
+        
+        # === CHUYỂN MODEL NẾU HẾT KEYS ===
+        if all_keys_exhausted and files_to_process:
             try:
                 curr_idx = MODEL_PRIORITY.index(current_model)
                 if curr_idx + 1 < len(MODEL_PRIORITY):
@@ -341,18 +388,17 @@ def run_step3_translate(work_dir, model, max_workers=3, progress_callback=None):
                     api_manager.reset_all_status_except_disabled()
                     continue 
                 else:
-                    logging.error("Đã hết danh sách model dự phòng!")
+                    logging.error("Đã hết danh sách model dự phòng! Không thể tiếp tục.")
                     break
             except ValueError:
                 logging.error(f"Model {current_model} không nằm trong danh sách fallback.")
                 break
-        else:
-            if batch_failed_files:
-                logging.warning(f"Có {len(batch_failed_files)} file bị lỗi nội dung.")
-                break
-            else:
-                break
+        elif not batch_completed and batch_failed:
+            # Không có file nào thành công và có lỗi → dừng lại
+            logging.warning(f"Không có file nào dịch thành công. Dừng lại.")
+            break
 
+    # === MERGE RESULTS ===
     success_count = len(completed_files)
     
     if success_count > 0:
@@ -383,10 +429,11 @@ def run_step3_translate(work_dir, model, max_workers=3, progress_callback=None):
         except Exception as e:
             logging.error(f"Merge error: {e}")
 
-    if not files_to_process:
+    files_remaining = [f for f in part_files if f not in completed_files]
+    if not files_remaining:
         return True, f"Hoàn thành 100% ({success_count} files)"
     elif success_count > 0:
-        return True, f"Hoàn thành một phần {success_count}/{len(part_files)}. Lỗi: {len(files_to_process)} file."
+        return True, f"Hoàn thành một phần {success_count}/{len(part_files)}. Lỗi: {len(files_remaining)} file."
     else:
         return False, f"Thất bại hoàn toàn. {errors_encountered[:1]}"
 
@@ -444,16 +491,17 @@ def convert_txt_to_srt_using_template(txt_path, srt_template_path, output_srt_pa
 
 
 # ========== STEP 4: Generate TTS Audio ==========
-def run_step4_tts(work_dir, voice, rate, volume, speed_factor=1.0, progress_callback=None):
+def run_step4_tts(work_dir, voice, rate, volume, speed_factor=1.0, capcut_speed=0, progress_callback=None):
     """
-    Bước 4: Tạo audio từ SRT đã dịch
+    Bước 4: Tạo audio từ SRT đã dịch (Hỗ trợ Edge TTS và CapCut TTS)
     
     Args:
         work_dir: Thư mục làm việc gốc
-        voice: Tên giọng đọc (vi-VN-NamMinhNeural, ...)
-        rate: Tốc độ đọc (+30%, -20%, ...)
-        volume: Âm lượng (+30%, ...)
-        speed_factor: Hệ số scale thời gian SRT (1.0 = không đổi, 1.2 = chậm lại 20%)
+        voice: Tên giọng đọc (Edge hoặc CapCut)
+        rate: Tốc độ đọc (cho Edge TTS, ví dụ "+30%")
+        volume: Âm lượng (cho Edge TTS, ví dụ "+30%")
+        speed_factor: Hệ số scale thời gian SRT
+        capcut_speed: Tốc độ đọc cho CapCut (int, -10 đến 10, default 0)
         progress_callback: Callback cập nhật UI
         
     Returns:
@@ -461,20 +509,25 @@ def run_step4_tts(work_dir, voice, rate, volume, speed_factor=1.0, progress_call
     """
     import asyncio
     
-    logging.info(f"[Step 4] Bắt đầu TTS với voice: {voice}, rate: {rate}")
-    
-    # Import TTS functions
+    # Import
+    from app.config.list_voice_capcut import get_voice_id_by_name
+    from app.core.tts_capcut_function import tts_batch_sync
+    # Import Edge TTS functions
     try:
         from app.core.tts_funtion import (
             parse_srt_file, 
-            generate_batch_audio_logic
+            generate_batch_audio_logic,
+            get_safe_filename
         )
     except ImportError:
         from tts_funtion import (
             parse_srt_file,
-            generate_batch_audio_logic
+            generate_batch_audio_logic,
+            get_safe_filename
         )
-    
+
+    logging.info(f"[Step 4] Bắt đầu TTS. Voice: {voice} | Rate: {rate} | CapCut Speed: {capcut_speed}")
+
     # Đường dẫn input/output
     srt_input = os.path.join(work_dir, "auto", "translated_subtitle.srt")
     audio_dir = os.path.join(work_dir, "auto", "audio")
@@ -498,87 +551,97 @@ def run_step4_tts(work_dir, voice, rate, volume, speed_factor=1.0, progress_call
     # Tạo thư mục audio
     os.makedirs(audio_dir, exist_ok=True)
     
-    # ===== Bước 4.1: Tạo audio từng câu =====
-    async def run_tts():
-        return await generate_batch_audio_logic(
-            entries=entries,
+    # Kiểm tra xem đây là giọng CapCut hay Edge
+    capcut_voice_id = get_voice_id_by_name(voice) if voice else None
+    
+    audio_files = [] # List[(path, start_ms)]
+    
+    if capcut_voice_id:
+        # === Xử lý CapCut TTS ===
+        logging.info(f"[Step 4] Phát hiện giọng CapCut: {voice} -> ID: {capcut_voice_id}")
+        
+        texts = [e.text for e in entries]
+        
+        # Gọi hàm tts_batch_sync của CapCut
+        # Pattern file name khớp với hàm get_safe_filename của Edge TTS để tương thích format
+        # get_safe_filename trả về: "{index:03d}_{safe_text}.wav"
+        
+        # Lưu ý: tts_batch_sync dùng index i+1 (1-based) khi format filename.
+        # Chúng ta cần đảm bảo index khớp với entries (entries có index).
+        
+        # Cách tốt nhất là dùng một custom mapping hoặc đơn giản là tạo file xong rồi map lại
+        # Tuy nhiên tts_batch_sync nhận list text và xử lý tuần tự.
+        
+        # Ta sẽ dùng text[:20] làm safe name cho đơn giản và consistent
+        # Nhưng CapCut function cần filename_pattern đơn giản.
+        # Hãy dùng pattern: "{index:03d}_audio.wav" để tránh lỗi ký tự đặc biệt
+        # Sau đó chúng ta sẽ rename lại hoặc just create mapping based on index.
+        
+        capcut_results = tts_batch_sync(
+            texts=texts,
             output_dir=audio_dir,
-            voice=voice,
-            rate=rate,
-            volume=volume,
-            pitch="+0Hz",
-            max_concurrent=5,
-            stop_event=None,
-            progress_callback=None
+            speaker=capcut_voice_id,
+            audio_format="wav",
+            speech_rate=capcut_speed,
+            filename_pattern="{index:03d}_cc.wav", # Temp simple name
+            verbose=True
         )
-    
-    try:
-        # Chạy async TTS
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        audio_files = loop.run_until_complete(run_tts())
-        loop.close()
         
-        logging.info(f"[Step 4] Đã tạo {len(audio_files)} audio files")
+        # Map kết quả trả về vào audio_files list
+        # tts_batch_sync trả về List[TTSResult]
+        # TTSResult có index (0-based from texts list), output_path, success
         
-        if not audio_files:
-            return False, "Không tạo được audio nào"
-            
-    except Exception as e:
-        logging.error(f"[Step 4] Lỗi tạo audio: {e}")
-        return False, f"Lỗi TTS: {e}"
-    
-    # ===== Kiểm tra và tạo lại các file bị lỗi (size = 0) =====
-    try:
-        from app.core.tts_funtion import validate_generated_files, get_safe_filename
-    except ImportError:
-        from tts_funtion import validate_generated_files, get_safe_filename
-    
-    failed_entries = validate_generated_files(entries, audio_dir)
-    
-    if failed_entries:
-        logging.warning(f"[Step 4] Phát hiện {len(failed_entries)} file bị lỗi, đang tạo lại...")
-        
-        # Retry tạo lại các file bị lỗi (tối đa 2 lần)
-        for retry in range(2):
-            if not failed_entries:
-                break
+        for res in capcut_results:
+            if res.success and res.index < len(entries):
+                entry = entries[res.index] # entries tương ứng
                 
-            logging.info(f"[Step 4] Retry lần {retry + 1}: tạo lại {len(failed_entries)} file...")
-            
-            async def retry_tts():
-                return await generate_batch_audio_logic(
-                    entries=failed_entries,
-                    output_dir=audio_dir,
-                    voice=voice,
-                    rate=rate,
-                    volume=volume,
-                    pitch="+0Hz",
-                    max_concurrent=3,
-                    stop_event=None,
-                    progress_callback=None
-                )
-            
-            try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                retry_files = loop.run_until_complete(retry_tts())
-                loop.close()
+                # Để tương thích với logic merge phía sau (dựa trên tên file để tìm),
+                # hoặc logic merge chấp nhận list[(path, start)].
+                # Hàm merge_audio_files_ffmpeg nhận list[(path, start)].
+                # Nên ta chỉ cần add vào list là được.
                 
-                # Kiểm tra lại
-                failed_entries = validate_generated_files(failed_entries, audio_dir)
-                
-                if not failed_entries:
-                    logging.info(f"[Step 4] Đã tạo lại thành công tất cả file lỗi!")
-                    # Thêm các file mới vào danh sách
-                    audio_files.extend(retry_files)
-                    
-            except Exception as e:
-                logging.error(f"[Step 4] Lỗi retry TTS: {e}")
+                audio_files.append((res.output_path, entry.start_ms))
+            else:
+                logging.error(f"CapCut TTS failed for index {res.index}: {res.error_message}")
+
+    else:
+        # === Xử lý Edge TTS (Cũ) ===
+        async def run_tts():
+            return await generate_batch_audio_logic(
+                entries=entries,
+                output_dir=audio_dir,
+                voice=voice,
+                rate=rate,
+                volume=volume,
+                pitch="+0Hz",
+                max_concurrent=5,
+                stop_event=None,
+                progress_callback=None
+            )
         
-        if failed_entries:
-            logging.warning(f"[Step 4] Vẫn còn {len(failed_entries)} file không tạo được")
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            audio_files = loop.run_until_complete(run_tts())
+            loop.close()
+            
+            # Retry logic chỉ áp dụng cho Edge TTS vì CapCut logic đơn giản hơn (và có retry nội bộ nếu cần thiết kế thêm)
+            # Tuy nhiên để code gọn, ta giữ retry logic riêng cho Edge hoặc tích hợp sau.
+            # Ở đây ta tái sử dụng logic validate chỉ cho Edge, hoặc chung?
+            # Với CapCut, ta đã có kết quả success/fail rõ ràng.
+            
+        except Exception as e:
+            logging.error(f"[Step 4] Lỗi tạo audio Edge TTS: {e}")
+            return False, f"Lỗi TTS: {e}"
+
     
+    # Kiểm tra kêt quả chung
+    if not audio_files:
+        return False, "Không tạo được audio nào (hoặc lỗi toàn bộ)"
+    
+    logging.info(f"[Step 4] Tổng hợp {len(audio_files)} file audio thành công")
+
+
     # ===== Bước 4.2: Cắt khoảng lặng đầu file audio =====
     logging.info(f"[Step 4] Đang cắt khoảng lặng đầu các file audio...")
     trim_count = 0
@@ -600,44 +663,34 @@ def run_step4_tts(work_dir, voice, rate, volume, speed_factor=1.0, progress_call
     else:
         srt_for_merge = srt_input
     
-    # ===== Bước 4.3: Ghép audio (không phân tích tốc độ) =====
+    # ===== Bước 4.4: Ghép audio (không phân tích tốc độ) =====
     try:
-        from app.core.tts_funtion import merge_audio_files_ffmpeg, parse_srt_file as parse_srt
+        from app.core.tts_funtion import merge_audio_files_ffmpeg
     except ImportError:
-        from tts_funtion import merge_audio_files_ffmpeg, parse_srt_file as parse_srt
+        from tts_funtion import merge_audio_files_ffmpeg
     
-    # Lấy danh sách audio files với timing từ SRT
-    srt_entries = parse_srt(srt_for_merge)
-    file_list = []
+    # Nếu dùng CapCut, audio_files đã đầy đủ.
+    # Nếu dùng Edge TTS, audio_files cũng đã đầy đủ.
+    # Tuy nhiên merge_audio_files_ffmpeg đôi khi cần list được sort.
     
-    for entry in srt_entries:
-        # Tìm file audio tương ứng
-        prefix = f"{entry.index:03d}_"
-        for f in os.listdir(audio_dir):
-            if f.startswith(prefix) and f.endswith(".wav"):
-                audio_path = os.path.join(audio_dir, f)
-                file_list.append((audio_path, entry.start_ms))
-                break
+    audio_files.sort(key=lambda x: x[1]) # Sort by start_ms
     
-    if not file_list:
+    if not audio_files:
         return False, "Không tìm thấy file audio để ghép"
     
-    logging.info(f"[Step 4] Ghép {len(file_list)} audio files...")
+    logging.info(f"[Step 4] Ghép {len(audio_files)} audio files...")
     
-    # Xóa file output cũ nếu tồn tại (tránh lỗi file đang bị khóa)
+    # Xóa file output cũ nếu tồn tại
     if os.path.exists(output_audio):
         try:
             os.remove(output_audio)
-            logging.info(f"[Step 4] Đã xóa file cũ: {os.path.basename(output_audio)}")
         except PermissionError:
-            # File đang bị khóa, thử tên file khác
             import time
             timestamp = int(time.time())
             output_audio = output_audio.replace(".wav", f"_{timestamp}.wav")
-            logging.warning(f"[Step 4] File bị khóa, sử dụng tên mới: {os.path.basename(output_audio)}")
     
     try:
-        success = merge_audio_files_ffmpeg(file_list, output_audio)
+        success = merge_audio_files_ffmpeg(audio_files, output_audio)
         
         if success:
             logging.info(f"[Step 4] Đã ghép audio -> {output_audio}")

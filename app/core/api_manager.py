@@ -282,23 +282,43 @@ class APIKeyManager:
             return None, None
     
     def get_all_available_keys(self) -> List[Dict]:
-        """Lấy tất cả API keys đang available"""
+        """
+        Lấy tất cả API keys đang available theo thứ tự "Quét Ngang" (Horizontal Sweep).
+        
+        Thứ tự trả về:
+        - Project-1 của tất cả accounts trước
+        - Sau đó Project-2 của tất cả accounts
+        - ... và tiếp tục
+        
+        Điều này đảm bảo mỗi account được nghỉ giữa các lần sử dụng.
+        """
         self._auto_recover_all()
-        available = []
+        
+        # Thu thập keys theo project index
+        # keys_by_project[project_idx] = [list of (account, project, key_info)]
+        max_projects = 5  # Fixed 5 projects per account
+        keys_by_project = {i: [] for i in range(max_projects)}
         
         for account in self.config.get("accounts", []):
             if account.get("account_status") != "active":
                 continue
             
-            for project in account.get("projects", []):
+            for proj_idx, project in enumerate(account.get("projects", [])):
                 if self._is_project_available(project):
-                    available.append({
+                    key_info = {
                         "account_id": account["account_id"],
                         "account_email": account.get("email", ""),
                         "project_name": project["project_name"],
                         "api_key": project["api_key"],
                         "name": f"{account['account_id']}/{project['project_name']}"
-                    })
+                    }
+                    keys_by_project[proj_idx].append(key_info)
+        
+        # Ghép lại theo thứ tự horizontal: Project-1 của tất cả acc, Project-2 của tất cả acc, ...
+        available = []
+        for proj_idx in range(max_projects):
+            available.extend(keys_by_project[proj_idx])
+        
         return available
 
     def reset_all_status_except_disabled(self):
